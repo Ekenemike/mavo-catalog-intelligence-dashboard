@@ -1,0 +1,1147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mavo — Catalog Intelligence Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0C0C0F;
+  --surface: #141417;
+  --surface2: #1C1C21;
+  --border: #242429;
+  --white: #F0EEF8;
+  --muted: #6B6B7A;
+  --accent: #7C5CFC;
+  --accent2: #FC5C7D;
+  --green: #22C55E;
+  --amber: #F59E0B;
+  --red: #EF4444;
+  --teal: #14B8A6;
+  --purple: #A855F7;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--white);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* UTILITIES */
+.mono { font-family: 'DM Mono', monospace; }
+.muted { color: var(--muted); }
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* ANIMATIONS */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.fade-up { animation: fadeUp 0.6s ease forwards; }
+.fade-up:nth-child(1) { animation-delay: 0.1s; opacity: 0; }
+.fade-up:nth-child(2) { animation-delay: 0.2s; opacity: 0; }
+.fade-up:nth-child(3) { animation-delay: 0.3s; opacity: 0; }
+.fade-up:nth-child(4) { animation-delay: 0.4s; opacity: 0; }
+.fade-up:nth-child(5) { animation-delay: 0.5s; opacity: 0; }
+
+/* NAV */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(12,12,15,0.9);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.nav-brand { display: flex; align-items: center; gap: 10px; }
+.nav-brand img {
+  width: 32px; height: 32px; border-radius: 50%;
+  object-fit: cover; border: 1.5px solid var(--accent);
+}
+.nav-brand-name { font-weight: 700; font-size: 15px; }
+.nav-links { display: flex; gap: 4px; }
+.nav-link {
+  padding: 6px 14px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: var(--muted);
+  text-decoration: none; transition: all 0.2s; cursor: pointer;
+}
+.nav-link:hover { color: var(--white); background: var(--surface2); }
+.nav-badge {
+  padding: 4px 12px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  background: rgba(124,92,252,0.15); color: var(--accent);
+  border: 1px solid rgba(124,92,252,0.3);
+}
+
+/* HERO */
+.hero {
+  padding: 48px 24px 32px;
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 32px; align-items: center;
+  animation: fadeUp 0.6s ease;
+}
+.hero-photo {
+  width: 80px; height: 80px; border-radius: 50%;
+  object-fit: cover; border: 2px solid var(--accent);
+  box-shadow: 0 0 30px rgba(124,92,252,0.3);
+  margin-bottom: 16px;
+}
+.hero-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 3px;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+}
+.hero-title { font-size: clamp(28px, 5vw, 48px); font-weight: 700; line-height: 1.1; margin-bottom: 12px; }
+.hero-title span {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.hero-desc { font-size: 15px; color: var(--muted); max-width: 560px; line-height: 1.7; }
+.hero-stats { display: flex; flex-direction: column; gap: 12px; align-items: flex-end; }
+.hero-stat { text-align: right; }
+.hero-stat-val { font-size: 28px; font-weight: 700; color: var(--white); line-height: 1; }
+.hero-stat-lbl { font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+
+/* WRAPPER */
+.wrapper { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; }
+
+/* SECTION */
+section { margin-bottom: 48px; }
+.section-header { margin-bottom: 20px; }
+.section-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.section-desc { font-size: 13px; color: var(--muted); }
+
+/* GRID LAYOUTS */
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.grid-2 { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+.grid-52 { display: grid; grid-template-columns: 5fr 2fr; gap: 16px; }
+.grid-25 { display: grid; grid-template-columns: 2fr 5fr; gap: 16px; }
+
+/* CARD */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: #333; }
+.card-sm { padding: 18px; }
+
+/* STAT CARDS */
+.stat-card { text-align: center; }
+.stat-val { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+.stat-lbl { font-size: 12px; color: var(--muted); font-weight: 500; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 4px; opacity: 0.7; }
+
+/* SONG CARDS */
+.song-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+.song-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.song-card:hover { transform: translateY(-2px); border-color: #333; }
+.song-card:hover::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(124,92,252,0.03), transparent);
+  pointer-events: none;
+}
+
+.song-number {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px; color: var(--muted); margin-bottom: 12px;
+}
+.song-name { font-size: 19px; font-weight: 700; margin-bottom: 4px; }
+.song-date { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+
+.song-archetype {
+  margin-bottom: 16px;
+}
+
+.song-desc {
+  font-size: 13px; color: var(--muted); line-height: 1.65;
+  margin-bottom: 16px; padding: 12px;
+  background: var(--surface2); border-radius: 10px;
+  border-left: 3px solid;
+}
+
+.song-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.metric-item {
+  background: var(--surface2); border-radius: 10px; padding: 12px;
+}
+.metric-val { font-size: 18px; font-weight: 700; line-height: 1; }
+.metric-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.song-geo { margin-top: 14px; }
+.geo-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+.geo-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.geo-label { font-size: 11px; color: var(--muted); width: 60px; flex-shrink: 0; }
+.geo-track { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+.geo-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+.geo-pct { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--white); width: 32px; text-align: right; }
+
+/* DECAY BADGE */
+.decay-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.decay-low { background: rgba(34,197,94,0.12); color: var(--green); }
+.decay-moderate { background: rgba(245,158,11,0.12); color: var(--amber); }
+.decay-high { background: rgba(239,68,68,0.12); color: var(--red); }
+.decay-vlow { background: rgba(20,184,166,0.12); color: var(--teal); }
+
+/* REVENUE CARDS */
+.rev-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 22px;
+}
+.rev-song-name { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+.rev-breakdown { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.rev-row { display: flex; justify-content: space-between; align-items: center; }
+.rev-label { font-size: 12px; color: var(--muted); }
+.rev-val { font-size: 14px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.rev-divider { height: 1px; background: var(--border); margin: 4px 0; }
+.rev-total { font-size: 20px; font-weight: 700; }
+.rev-eff {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.rev-high { background: rgba(34,197,94,0.12); color: var(--green); }
+.rev-med { background: rgba(245,158,11,0.12); color: var(--amber); }
+.rev-low { background: rgba(239,68,68,0.12); color: var(--red); }
+
+/* INSIGHT BOX */
+.insight {
+  background: rgba(124,92,252,0.07);
+  border: 1px solid rgba(124,92,252,0.2);
+  border-radius: 14px; padding: 20px;
+  display: flex; gap: 14px;
+}
+.insight-icon { font-size: 20px; flex-shrink: 0; }
+.insight-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; color: var(--white); }
+.insight-body { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+/* TAKEAWAY BOX */
+.takeaway {
+  background: var(--surface2); border-radius: 16px; padding: 28px;
+}
+.takeaway-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 20px; margin-top: 20px; }
+.takeaway-item { display: flex; gap: 14px; }
+.takeaway-dot {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; flex-shrink: 0;
+}
+.takeaway-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.takeaway-body { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* CATALOG TOTAL */
+.catalog-total {
+  background: linear-gradient(135deg, rgba(124,92,252,0.1), rgba(252,92,125,0.07));
+  border: 1px solid rgba(124,92,252,0.2);
+  border-radius: 20px; padding: 32px;
+  display: flex; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; gap: 24px;
+}
+.catalog-total-main {}
+.catalog-total-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+.catalog-total-val { font-size: 48px; font-weight: 700; line-height: 1; }
+.catalog-total-val span {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.catalog-mini-stats { display: flex; gap: 32px; }
+.cat-mini { }
+.cat-mini-val { font-size: 22px; font-weight: 700; }
+.cat-mini-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* SUMMARY */
+.summary-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.summary-item {
+  background: var(--surface2); border-radius: 14px; padding: 20px;
+}
+.summary-icon { font-size: 24px; margin-bottom: 10px; }
+.summary-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+.summary-body { font-size: 12px; color: var(--muted); line-height: 1.65; }
+
+/* CHART CONTAINERS */
+.chart-wrap { position: relative; }
+.chart-caption { font-size: 12px; color: var(--muted); margin-top: 12px; text-align: center; }
+
+/* DIVIDER */
+.divider {
+  height: 1px; background: var(--border); margin: 16px 0;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .grid-4 { grid-template-columns: repeat(2,1fr); }
+  .grid-3 { grid-template-columns: 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-52 { grid-template-columns: 1fr; }
+  .grid-25 { grid-template-columns: 1fr; }
+  .hero { grid-template-columns: 1fr; }
+  .hero-stats { align-items: flex-start; flex-direction: row; flex-wrap: wrap; gap: 20px; }
+  .catalog-total { flex-direction: column; }
+  .takeaway-grid { grid-template-columns: 1fr; }
+  .summary-grid { grid-template-columns: 1fr; }
+  .catalog-mini-stats { flex-wrap: wrap; gap: 16px; }
+  nav .nav-links { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-brand">
+    <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCADIAMgDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwCjGvyVetl4qsgx8var9qua9FHIysV+Y1LGcU6SPD8dKTbVkD2G9dtPgjwfpT7ZMtk9atRw98GrRJLCPlFTKKao2jIpzMVGaq9ibXGKoG+pVYBRyKqSyKjEZ61m3V+EJw3bArKddR3LhRctEb2QQeegyK0dE0i81bHkoojX77tXMeHY73WNYgsLfB/jmcdFUda9r022S3tFgjVViQY+VOW96ujX9oZYim6Zy154REcRWK8EkwHLfwmuN1CT7FeGznJjl6gHofevWdTeGysHmuNqRIM+/PTiuQ+IuhDXNFM1mVGo26h4WUcOP7p+vauqKTV2cHt2p2Zx9vcrukOeSelW4n3Ltrl9JuGbCzRyRyLxIrjBVvSultNpAYHmmo2OjnJHHzVKibsCmopc81bhQDnvU2KuZ9+mGUe9VJ0+YVp3qqzAn7wNVLhehpFIrbflNU5oyc1olcLVZhwaTKRmNGc1E8Rq+681BJkUiiiVoqV+KKgY+OJmbIxWlZwtntUVugzV+BcVzI2ZBOmGpgjJ6VNNzLinItaIi423QghuMVoBV2jFVlXCCrIOIs072JYMKr3LgDvTGn2tzVW9uRisqtTlNYU7lHU7jy2OSfwrEkcyu2Tz/CO5qfUJi74NbHw+0r+0/E9urIzRQfvZBjg46D8a8uU3VnY9FJU4ts9I+GmhNpGmIzoFuboZYt1A9Kl+KnjvTPh/4WXV9She7MknlWlmjbWuH9j6e9W/G3irQPh/4bk1zxHciPeMQ2yn97Iw6Ior4t+JPjjWfH3iF/EOsnyUwYrKzQ/JbJ2VR6nua9D2qoR5UedChPEzu9j2K7/agm+wTG38DhbmVNpWS73Rj07VzTftJ39y90+reH47Zp9gK2jfKyr/ACP868lhstQurczRRp5Y65NZVzDC29X2qw4zmsPrdTc6XgKKdrH0BP8AEXw94y8SvqWii5gmlhBuIJU2BXA5K+ua63Sr7dEvzZycV8q+E7iTSvElldQFjGH2yHHBB619BaVdsIwsbcMQa9bC1/aR1PPxOG9k9Nj0K1nBNaUDbjntXMaZcF2Ga3YpSvFbNWOcWbJucdsVHMuRgVY25+eo3FQyosrOAFxVZxxV6Vaqyriky0UWHzVDIMmrLj5qhcUiinJEx6YoqZqKgdyxaNuPNaBC7OKz1XY3FWoyT1NcyOhoVc7/AGp9O2jFNNWZj1GKJpQq7aeoBGTVO99RUyehUVdlK6lHJJrGvbna3Bq5qTYTHvWHI5d8NXm4iqehShoKTgbmPJbj39q7afX1+Ffw9uNcktRea1qCfuIW+6g/hz7CuIkXCHDbiMEfUU34uXs3ifw/poizutwElT37EVnh3FNtjrwc0keH+JPFWv8AivxFNrPiO5l1C7b7gYnbGv8AdQdMVU1dpjbRTKxjKDa3qp7U+a2udM1eaC7Rg6MCfRR2xV+0Nrc211LqLj5j+7VeGespuUndnbBKMbIrW11cPamFhwQCc1HfWo2GVAeOTWhF/o0ZAj8pSMAOdxNLtLW7Iy4LDNdFOPu6mUjP0508gCQL8p79q9O8G3ssmkW5nbY33VYjnbXnnhrUl0jUp5ZNPtr5ZYWgMc6blXdj5x6MOxr0CzdVjiEI2oVwqjsK9DALW/Q8/GP3bM9C0a4TeOa6WCdSQRXn2lSuuCOtdVpk0jcNj16V6z1PIeh1KSgpzUbyL61VVztUeoppGfWsmhxLbnK1UJ2g1YyRFmq0/wB0nuallopmT5iKrTnJqTaNxPPNJKgAzSLRGn3aKPujAopWGX5V5p0XJ4pZaS3+9XEmdLLJBAphBqbGaNtWmRYRTgYqveKdlWQKbcJmOpepUdGc1qCHJz0rKeArISR3xxXS3kBLYXmsa9ltoj+/mgTjPztjpXnVoandRZRuUCKPlKDOVPtUWn7dUgupdNZLoW4Odv3SfQeprkvFer3mvxtaaE5Syh+/cnjzfp7Vl6H4n1vwdpWo6dYiGVNUTYXA5Rj1I9Ca5IuPNqdkqc+W6MzxJeC/AvHhAt3JicgZaNs8bvSuWWGZL9oVj81oj8pB4FdZc2bQ3V5o8EDySalCrQ56Iw6sapaTanTpja377Z/MWMydgT3PtTk7GsIluGBLWFJL+3fzHGRIwyprI1CdY3dwTtPSu71rTZ7C8ksNInTVrYW6uY5OWJI+8vtXAatazq586IxMW+6a6aUrmM1YoQwvMGkKkjPGDzmvRfDEgn0q2k3biq7SO4IrjY0RLTYAcn0rX8F31vbTz2lxN5Q++ua7sLLllY4MTHmjc9M0vkDAPFdTpSkvj2rnYbW609LSS6Xy4L2IT2r4++tdFpR/eLznivZWx40jZfhVHcU6PkVFMeadGaze4R2LcxAiqlOfkxVmc/u6qycipZaKi/fwadN92jGHom+6KktEBGRmipQvy0UrjLBkBqS3bmqYOKmt2yxAIBHrXn8x2cpoBhmmo3zVC7lMcgkihHo5hOJZeQbqZMxJBUZI4x9e9RFgTmjzUUsZXCRqhZ2zgKo6k03LQSi76GN4p1O1020hiLAz3beVDnuccn8K8e8QNNqep2f2u7M0bQIHjz92TJ3f0qz4r8QTa94hOrW4/wBHtW22cQ44B5Y+u7+lZOs3SDXzNpUfmf2m2bZwmQZGxujx/D7GvIrVXVlyxPYw9JUlzTLfi64a1tYdJ0uJY5ZO4PSsSPTLu20yS3uZV3yNndnv7V6UvhbTYIYDqEctzqZwG8o4Vm9FHb616lpXw10b+yYZdTtFaaVQdmfu+x9T71dDBzn8IsRj6VPc+ffDmq6bDEqTieO+YeWZZTuyB2z2zV7VdPE8LSSWflwuP9YOAfx717L4g+F3hiQNJY7rCVk2lV+aI/VfX3rltJ+E2sXSvb3viFPsaNmFUjyV+grapgasehjHGUJq6djxzUxqFlqFpfaRcyzSMQHQ5biuz8QaNHrGiR36YFyo/eDbjke1M+M9n/wr6605LTUhqErH/SI5I8MB6j0qv4X8UWuqQlbcxxTSLloGbJ98CuS1Wk7tHdSnSqx5Uzhb93s4neaNzEpw2ByPeun+BXhO++IHxBtkgh8rS7BxLf3AHBj67Pqa6fSvBl34w1JrDRYY5ZGOJHY4jiXvu9T6Cva/hd4etvhpp0WixSx/Y53LTzMm2TzvVj/d9q9TC2nK7PIx0nSi0tzvPEXhzS9e0r+zbuFUhVf3Lj70OBxt9vavIr/w3rfhm/b7XBLcWY/1d0gyrL2yOxr27hgM9uQaesXmZUHKn7wPO7617r0PmYTlc8NlvkdgQwIP908Vas3UjdmvQvEPw+0nUi00CCxuT914+EJ9xXC6v4f1fw/j7dBut8485OQfw7VF7nSqiFlfharStkH61A90DjHYUwTbl5xzSZtEkByKbN0pFYUkj54qGaIdJRSsAetFQURuaW2Vn3c4FQu1SWj/AHq8dzPSUSxIdu1QSeO9CyY61WuZCGX6URvmhTuDgi2rY6kdM1yXx8vp9A8P6Ro28Q3Wu73mBOCsC4wvtu7/AEr0zwFpC39y+o3Ee62hb7v95/Sux1zwp4a1zUrXVda0az1G9tUKxPcjKxqegA9q6adNzVjmnVVKSZ8faDomta0yWmh6PfXxchS0MJ2gD1Pau68NeGptAik01reO61aV8zKg3iNuyqex9TX0N4l1G38P+Fbma1iFudvlwRxAIC56dO1eZ+E0ePTJjBbD+0JyXe4Jy289vpURy/ldjaeYOortWRf8IaEml3ZuLlkuLxm6H5lhX0Hr9a7+3DXLF2X5VHyA+lYnhfS5XjWSYkzvw9d5bWKRRdB04r0KEI0o2ieVXk6ktTnrTRvtMjySADn1rWXTIxJDAoVdzbeB+P8AStK1hVEYAVn6/qK6Zo2qaw33bGxlm/ELj+tZzqvYpQS2Pi34oXo8e+I/F1pYRJNe2WovPYIo3yzQKcMoHoOteVaJpes3utw6do9ldvqjuUiijQq7N3HPSo7TU7211ManaXEkF2sjSCeM/OSWJ5/wravfFvifXt2nm7Z3urlXC28ex5JugORyOvSvMl7zPZp3hHQ908MeObfwj4N06Lw3ZfatTuMxXk78RxXK9dx/iYZ+73rltT8VeIbfxFba/quoS6jAJw15asdqMueiL/CRXtHi74W23hf9mWDSQ8S6lo5XUbuTGDJKeXB74GRXPfCf4Uy+LLSLVfEUUtlo0iqyW7j97dE/yWmoSjUViXWoujKU9z2/StTs9V0q01TT5hNaXUSyQyL0IIrQs5B5gUk568VWbTrTSLCO0022jtrO1Ty44oxhYsdql0VGMpkkBBJ7nNfQXvE+W0UtDbjUFSQccY6dKwvF8KXemXdvIPlZCD+X6V0Ua557VzvitvL069f+7AzfpWcNXZl1OjPm+LUzv2k+o/Wr8F0CAGODXFW9w7OTn+I/zNaMV0fNGSafQ9BR2OwWYFeDQkgZ9ozmsi3ulKAA81as5SZ6llWNctmiqvmUVBViGa4CriorWb5se9U7x2D4pbU/Nmvm+Y9rlNg4kGDVrSbOW+1GOxiGZn7+grNVyCMV6F8KrNGgu9VdSZJJBCh7DHXFaUm2zKrojsNJ0+HTNOt7EdIvmf3NXYYZbkmd/ljBO0VJBALl/wB4dqg5x3NPv7oIoUDai9Mdc17eHTieLiJNu5zHi2GDUruO2bzGWAenGTVnRNFtkQbVx+FXLWM+fN9pG7cN6kCtGOeCKM+W8YIHeumdTlVjngpTYaRZ7HLVokjkCk08FoN2RyuRTmi2+p71yRbsdDtci6HPrxXnf7RF+dL+CPiu43YM1obVfq5/+tXoxGQR3xx9a8N/bTvfs3wYW1V8NfalEpHqFznFc83ZXZvTV5JHxKv31GNhAG0177+xf4F/4SLx7P4qvIS+n6EodNw4e5b7v5c14GivNJ5MamR2YKgHViTgAV+i3wK8HL4E+GmnaKUC3kqfab45zulcZP4DjA7c1zUleVzuxE+WNkd1eWVpqDeVeIsyLyYm+6+fX6U6SNVHAX7oBA9uij2pkTA/NgYHBHqKmwpIlXsMV6MeVyuePOLasytNF9ohZT1ArChuktQ0bKdwc810sS7ZXI7isZ7JLjzwV5AZlx61105rqefUg7pl+xlMsO/tXP8AjyYJ4f1S67JZuP0q/pErLbOgPzg4INY/j0ed4F1yNPviycn9KtLldx8/PofJ9s2D+J/nVxJAZKpQgbalQnfUXPXtobdtJgfhWnbOFdDWFA+AM1owT5A9ulS2FjXhkIPynFFUw/viis7lWH3wIbJptq245FSXnJqG3Uhq+aue3Yvu+xdxPSvZvh9AsXg7TwAMsDK/+8eteLOuVGTxmu08D+Oxodp/Z1/ZvPCn3ZB2FbUJxjLU58RByjoeqvMVUlFZj3wORUcCNdyNFIQMjoxwawYPHnhCWAy3GrQWoXkJKNhH4d64rxb8cfDWlzP/AGJp91q1wFAMpHlx/QH2r2Y16dNXbPJlh6lSVkj2OGKMJIqgsY09Oa4Xxzrmkacp+3X0FpkhR+8AOSeK+dvGfxr8f61ugtb1NHtn+6luuXx6F64LR7S913xZp6ahdXF5JPfRoxlcsDznpXJXxynpE66GBcNZH6D6Wv8AoMAycmMZ/Krrhccd6rW6+XHsH8AVf0FWPSuuOxwS3K8oKOD718yft8XZh0rwlpSsd0ks9wwHTAxj+dfT0/8ArB9K+Nv279ReX4laVpZORY6YHx7yf/qrCt8J04dXmjlf2TvBQ8WfFWC7vIf+JdoyfbLjd03j7in6n+Vfdc7/AL0RplnPJI6Adq8l/Za8IN4R+Fdo8sCtrOtEXso24Kx/wK305/OvXYYVgTaX5/jk/v8AsPasqcbIutPmY1spgDv196s2zBH8tuhqE4Zs44/hpZCWiwvDVspWOdxuXNhCEmq1khD9OpapLW4EkeDSnCBmHYGumEtDkqQ1uYTp9nvFYfckGfxrL8dMkHhPWLkHET2UgOfWugvY18qd2/5ZgAfWuP8Aiikx+GerpnBktGZTntXXe6OKKtM+WoW+WnxsM1XY7AB7U9G5rNntI0oGGeavQMuOp/KsuFuauwtxSY7GksmaKgibmisyjZvIzvp9vESwNW7yL5xwafbxHIIFeB7I9T2iAwnbUTwHNa6wZXvSNbA9QaPZhznMX9k7wH5f0rjtX0xstle1ep3UaBMY4rA1C2jeQqF+XFZy2NIs80XSyxAK966v4P8Ah9rn4g6Ou07YpxK3HTFaDafHwVXoc16H8BtHB8Q3N8UO2GPCn/aNOlHmmiK0+WDPcwvyVPHwuKYOmDUiYPYnI4r3UeCVrlgCAehIFfGvivTo/iZ+2RNot2260jvVgmYdDHDyf519c+KdVttE0W+1i7cLBY2z3Eme20f4kV8Y/so30+q/tIWmqXRDS3S3M7nHUsf/ANVc9V+8kdVBWi5H3FDBHbLsi6AbR9Bx/SkwxJ3detOjSUZ3srcnoKAOSQCM8c1q46HMpEatu/CknbC09YwmcZ5Peq9+Sq5FZtWNE7kNvMEZWH3R2rWGCnruG6uXhvore5BmPyO21vb3robc5UhXV1HKkehqqMrsVan1K14p+yKO75Zq85+PuqwaV4BNqGHn35EKjP8ACetek3bxkghwSeD2Ar5s/aN1iDUvGUGm2s4eKxiywU5BY9s+1egnocMKV6mp5dKwJApU+8KawGc05CS1Q2epZLYuw1dhPFUYulWoicUhl22PFFNh46UVA7HoV1GGfIFTWsQwOlOkdXGRSWrY/OvOaRvdltlCpwOagdgKklb5aqStWU3ZFxTZWu24rLnPJNWruQ4qkTujJrhm7s64KxECd3GPevZvgXaNH4fuLxlAWe4O09yB0rxmONppI4Y/vyOFX6mvpfwnp0WmeH7SziGAkSg+/vXXg4Xnc48bO0bGlP8AdJFNtmDxlWYrtJ5FPn+4fpVS23edsHR+DXqvQ8q11oeFftqeLTo3w7tvDUEmLvXpP3hHJECdc+mcjHrXh37HbEfHrRCOnkTL+GBWT+0p4wfxn8W9Uu45CbDT2+xWa542Jxn8a1f2O/8Aku+if9cZ/wCQrhlLmqHpRpqNE+81wMjpyaVBx1zSHqfrSg4FeitjymOAqhqqnbxV4Gq2orlKjkUiuflOE1pZZUeJRgsMZ9KfNrmoaB4VluFgW7NrCzlC2Cyr7+ta9zaF3zimXNmklu1vMoMcylCPYitKOGUSq+J00PnTxX8XfE+uq0Nuy6ZbSDBWI5OPrXDxySO7SSMzyOcvIxyxPrUniGwfSfEV/pUnW2ndf1qqrYrVu2h0QjG10Sk0sQJNQQuWNWkGGxUXKsW4elWosYqrF0q1F0pNjsWohmilh60VI7nbiTNWrNsGs+Mc1at2IxivMbOmxauZeeKozStnrT71sGqDEM2CTXNUlqbQjoMubg79zc1EHVuR0qGaJhwScVIqhoOuOuK5nubo3Ph7ZteeNdOiUZAk3t9BX0an7tcDoBivGPgRp/natd6mwJW3TykPbceteyn5V49Mc16+Bh7lzx8dO87ISU/JXLfEHXE8NeBNe112C/ZLCV4895MYUfqa6WRvkrwb9s7XP7N+FMGkI6rLq98q47mNM7v5iuis7Iww8eZnxc7PKxmc8uSx+pJNetfshf8AJfdC/wByX+VeSMdpKsfmP4AV6t+yTIyfHvw7txly6/XIrz6b96561ZWg0ffMA8oMB6n+dPD7l5qPOWOfU07NesvhPCe4qcODUV0/DVKOap3bnJHrV00RU2KkzfNUNyx2ex4pJWfd90fnTJ3cRbcDORXUm7nO1c+d/wBojQhY+J7fWIVPl30eyQ46Ov8A+uvMVr6M/aCsJbjwFc3G1WFpcRzZA5C85r5yDDaT7ZFc9XRnpYR3p2fQngGDVpOTVWM1Zgas7nSi4g4q1D0qvHgip4DzipchlpOtFItFTcVjsk61PEcMKpl8Uscp3CvLlI7IosX7DIxWaW+c1YvpTms1pTurmm7m0diw5Z17VFECgO84HUYpFkO2pNLt21DU7WxXrNMqfmazSvKxb0R7p8I9OGn+ELd9uJLomZ/x6V2TtxVTToY7e3jgiGERQoH4VZavoKEOWNj5+vPmk2RyZJ6ED3r5j/ak8LeM/iB49s9M8NaLLd2WkWvz3DHbGJn+8ufUYFfTF/ewWOnXWoXT4itYmmcewH+OK5HwM15PoMV/cxkXOoyPdSgvtHzH/ACs6+uhph24rmPljR/2aPHlyAdUvdIsA3Lb7jeQv0xXqPwR+An/AAh/jm08R3/idL2504q9vBbw4Vgc9TmvZ7u1a6IkEA2pwQrZpNMs7uDWIZ0QQJt8t1P8QHTFYwp2ZvOs2mdQAck+vNOHSmZozXdHY899x+ao3R5q0TVK5PNaUyKmxRl2h9u3n60y4wsJPQcUpO6TNQXT5hYV0IwINa0yPWPDeqWUo3LdWzKoPrivjNg0RaJxh0Yqw9MGvuPT1AsVJ6dDXx98U9LXQviDq9kB8nnmdP8AdfpWVdHbg3q0YSPmrduwrNibmrkDVytno2sa0TDFWIDzms+NuKtwtxUNisaCnNFRoeaKnmHynU7hSpJgt9KKK8uR2IhvHzGBVJD81FFYM1Ww566/4NWP2vxms5HFnEZPxooq6Pxoit8DPfYgAvH1oY0UV9Atj51nKePpfts1l4bjPzXMqzXR/wCmK/w/jWgAAoA4Xoo9B2oornludS+FGjYxiOMN6mkuBtuIj/tUUVq/hMI/EW80ZoopoQNyKpXDYNFFbQMpGYZQG3VVnPmyrF60UVuZGwFykcQ/hFfPn7V+mpbeJtH1Ef8ALe1MZ+qf/roorKrsdGF/iI8ZjPNWoTyKKK42esy9GeKu254ooqWBaR+aKKKzGf/Z" alt="Mavo">
+    <span class="nav-brand-name">Mavo</span>
+  </div>
+  <div class="nav-links">
+    <a class="nav-link" onclick="document.getElementById('overview').scrollIntoView()">Overview</a>
+    <a class="nav-link" onclick="document.getElementById('songs').scrollIntoView()">Songs</a>
+    <a class="nav-link" onclick="document.getElementById('behavior').scrollIntoView()">Behavior</a>
+    <a class="nav-link" onclick="document.getElementById('geography').scrollIntoView()">Geography</a>
+    <a class="nav-link" onclick="document.getElementById('revenue').scrollIntoView()">Revenue</a>
+    <a class="nav-link" onclick="document.getElementById('summary').scrollIntoView()">Summary</a>
+  </div>
+  <div class="nav-badge">Catalog Intelligence</div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div>
+    <img class="hero-photo" src="data:image/jpeg;base64,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" alt="Mavo">
+    <div class="hero-label">Music Catalog Analysis</div>
+    <h1 class="hero-title">How Mavo Makes<br>Money from <span>Streaming</span></h1>
+    <p class="hero-desc">A data-driven breakdown of 5 songs — showing which tracks generate long-term income, which create short-term buzz, and what the numbers say about building a sustainable music career.</p>
+  </div>
+  <div class="hero-stats">
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--accent)">105.7M</div>
+      <div class="hero-stat-lbl">Total Spotify Streams</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--teal)">$376K</div>
+      <div class="hero-stat-lbl">Est. Total Earnings</div>
+    </div>
+    <div class="hero-stat">
+      <div class="hero-stat-val" style="color:var(--green)">5</div>
+      <div class="hero-stat-lbl">Songs Analyzed</div>
+    </div>
+  </div>
+</div>
+
+<div class="wrapper">
+
+<!-- ═══════════════ SECTION 1: OVERVIEW ═══════════════ -->
+<section id="overview">
+  <div class="section-header">
+    <h2 class="section-title">📊 Catalog Overview</h2>
+    <p class="section-desc">A snapshot of the entire catalog's commercial performance at a glance.</p>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:16px">
+    <div class="card stat-card fade-up">
+      <div class="stat-val" style="color:var(--accent)">105.7M</div>
+      <div class="stat-lbl">Total Spotify Streams</div>
+      <div class="stat-sub">Across 5 songs</div>
+    </div>
+    <div class="card stat-card fade-up">
+      <div class="stat-val" style="color:var(--accent2)">5.54M</div>
+      <div class="stat-lbl">Total YouTube Views</div>
+      <div class="stat-sub">3 songs have YouTube presence</div>
+    </div>
+    <div class="card stat-card fade-up">
+      <div class="stat-val" style="color:var(--green)">$376K</div>
+      <div class="stat-lbl">Est. Total Revenue</div>
+      <div class="stat-sub">Spotify + YouTube combined</div>
+    </div>
+    <div class="card stat-card fade-up">
+      <div class="stat-val" style="color:var(--amber)">2.3 yrs</div>
+      <div class="stat-lbl">Catalog Span</div>
+      <div class="stat-sub">Dec 2023 — Mar 2026</div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-icon">💡</div>
+    <div>
+      <div class="insight-title">What This Catalog Is Telling You</div>
+      <div class="insight-body">Mavo's catalog is built around two anchors — <strong style="color:var(--white)">Tumo Weto</strong> and <strong style="color:var(--white)">Escaladizzy 2</strong> — which together account for <strong style="color:var(--white)">67% of all streams</strong> and an estimated <strong style="color:var(--white)">66% of all revenue</strong>. The newer releases (Mofe, Aura Salad) are still in their early lifecycle. The real story here is that Mavo already has two long-tail assets generating passive income — a foundation most artists don't build until much later.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SECTION 2: SONG CARDS ═══════════════ -->
+<section id="songs">
+  <div class="section-header">
+    <h2 class="section-title">🎵 Song Performance Cards</h2>
+    <p class="section-desc">Every song behaves differently. Here's what each one is doing for the catalog — and why it matters.</p>
+  </div>
+
+  <div class="grid-3" style="margin-bottom:16px">
+
+    <!-- TUMO WETO -->
+    <div class="song-card fade-up" style="--card-color:#7C5CFC">
+      <div class="song-card" style="border:none;padding:0;background:none;border-radius:0">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#7C5CFC,#A855F7)"></div>
+      </div>
+      <div class="song-number">01 / 05</div>
+      <div class="song-name">Tumo Weto</div>
+      <div class="song-date">📅 December 1, 2025</div>
+      <div class="song-archetype">
+        <span class="tag" style="background:rgba(124,92,252,0.12);color:#7C5CFC">🌱 Slow-Burn Retention Asset</span>
+      </div>
+      <div class="song-desc" style="border-color:#7C5CFC">
+        This is the catalog's <strong style="color:var(--white)">most valuable long-term asset</strong>. It took 45–60 days to peak — which is slow — but that patience paid off. People are still streaming it months later because they genuinely love it, not just because it was trending.
+      </div>
+      <div class="song-metrics">
+        <div class="metric-item">
+          <div class="metric-val" style="color:#7C5CFC">39.4M</div>
+          <div class="metric-lbl">Spotify Streams</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val" style="color:#7C5CFC">3.16M</div>
+          <div class="metric-lbl">YouTube Views</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val">500K</div>
+          <div class="metric-lbl">Peak Daily</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val" style="color:var(--green)"><span class="decay-pill decay-low">Low Decay</span></div>
+          <div class="metric-lbl">Retention Type</div>
+        </div>
+      </div>
+      <div class="song-geo">
+        <div class="geo-title">Audience Geography</div>
+        <div class="geo-bar-row"><span class="geo-label">Nigeria</span><div class="geo-track"><div class="geo-fill" style="width:43.2%;background:#7C5CFC"></div></div><span class="geo-pct">43.2%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">US</span><div class="geo-track"><div class="geo-fill" style="width:15.7%;background:#7C5CFC;opacity:.7"></div></div><span class="geo-pct">15.7%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">S. Africa</span><div class="geo-track"><div class="geo-fill" style="width:6.6%;background:#7C5CFC;opacity:.5"></div></div><span class="geo-pct">6.6%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Ghana</span><div class="geo-track"><div class="geo-fill" style="width:4.8%;background:#7C5CFC;opacity:.4"></div></div><span class="geo-pct">4.8%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Kenya</span><div class="geo-track"><div class="geo-fill" style="width:4.8%;background:#7C5CFC;opacity:.3"></div></div><span class="geo-pct">4.8%</span></div>
+      </div>
+    </div>
+
+    <!-- ESCALADIZZY 2 -->
+    <div class="song-card fade-up">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#14B8A6,#22C55E)"></div>
+      <div class="song-number">04 / 05</div>
+      <div class="song-name">Escaladizzy 2</div>
+      <div class="song-date">📅 July 22, 2025</div>
+      <div class="song-archetype">
+        <span class="tag" style="background:rgba(20,184,166,0.12);color:var(--teal)">🏛️ Mature Catalog Asset</span>
+      </div>
+      <div class="song-desc" style="border-color:var(--teal)">
+        The <strong style="color:var(--white)">silent earner</strong>. Not a flashy single — it's older, steady, and still generating streams. With the lowest peak daily streams of any song but almost no decay, this is the definition of catalog gold: it doesn't need hype to earn.
+      </div>
+      <div class="song-metrics">
+        <div class="metric-item">
+          <div class="metric-val" style="color:var(--teal)">30.9M</div>
+          <div class="metric-lbl">Spotify Streams</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val" style="color:var(--muted)">—</div>
+          <div class="metric-lbl">YouTube Views</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val">200K</div>
+          <div class="metric-lbl">Peak Daily</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val"><span class="decay-pill decay-vlow">Very Low</span></div>
+          <div class="metric-lbl">Retention Type</div>
+        </div>
+      </div>
+      <div class="song-geo">
+        <div class="geo-title">Audience Geography</div>
+        <div class="geo-bar-row"><span class="geo-label">Nigeria</span><div class="geo-track"><div class="geo-fill" style="width:60%;background:var(--teal)"></div></div><span class="geo-pct">60.0%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">US</span><div class="geo-track"><div class="geo-fill" style="width:10%;background:var(--teal);opacity:.7"></div></div><span class="geo-pct">10.0%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Ghana</span><div class="geo-track"><div class="geo-fill" style="width:4.9%;background:var(--teal);opacity:.5"></div></div><span class="geo-pct">4.9%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">S. Africa</span><div class="geo-track"><div class="geo-fill" style="width:3.7%;background:var(--teal);opacity:.4"></div></div><span class="geo-pct">3.7%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">UK</span><div class="geo-track"><div class="geo-fill" style="width:3.7%;background:var(--teal);opacity:.3"></div></div><span class="geo-pct">3.7%</span></div>
+      </div>
+    </div>
+
+    <!-- MOFE -->
+    <div class="song-card fade-up">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#FC5C7D,#F59E0B)"></div>
+      <div class="song-number">02 / 05</div>
+      <div class="song-name">Mofe</div>
+      <div class="song-date">📅 March 6, 2026</div>
+      <div class="song-archetype">
+        <span class="tag" style="background:rgba(252,92,125,0.12);color:var(--accent2)">⚡ Front-Loaded Hit</span>
+      </div>
+      <div class="song-desc" style="border-color:var(--accent2)">
+        <strong style="color:var(--white)">The biggest spike in the catalog</strong> — peaked in just 3 days with over 1M daily streams. That's viral energy. But high spikes come with high decay. The income was real but short. Worth it for visibility; needs a follow-up to convert listeners into fans.
+      </div>
+      <div class="song-metrics">
+        <div class="metric-item">
+          <div class="metric-val" style="color:var(--accent2)">12.0M</div>
+          <div class="metric-lbl">Spotify Streams</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val" style="color:var(--muted)">—</div>
+          <div class="metric-lbl">YouTube Views</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val">1.02M</div>
+          <div class="metric-lbl">Peak Daily</div>
+        </div>
+        <div class="metric-item">
+          <div class="metric-val"><span class="decay-pill decay-high">High Decay</span></div>
+          <div class="metric-lbl">Retention Type</div>
+        </div>
+      </div>
+      <div class="song-geo">
+        <div class="geo-title">Audience Geography</div>
+        <div class="geo-bar-row"><span class="geo-label">Nigeria</span><div class="geo-track"><div class="geo-fill" style="width:41.6%;background:var(--accent2)"></div></div><span class="geo-pct">41.6%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">US</span><div class="geo-track"><div class="geo-fill" style="width:15.1%;background:var(--accent2);opacity:.7"></div></div><span class="geo-pct">15.1%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">S. Africa</span><div class="geo-track"><div class="geo-fill" style="width:7%;background:var(--accent2);opacity:.5"></div></div><span class="geo-pct">7.0%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Ghana</span><div class="geo-track"><div class="geo-fill" style="width:5.3%;background:var(--accent2);opacity:.4"></div></div><span class="geo-pct">5.3%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Kenya</span><div class="geo-track"><div class="geo-fill" style="width:4.9%;background:var(--accent2);opacity:.3"></div></div><span class="geo-pct">4.9%</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="grid-2">
+
+    <!-- AURA SALAD -->
+    <div class="song-card fade-up">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#F59E0B,#EAB308)"></div>
+      <div class="song-number">03 / 05</div>
+      <div class="song-name">Aura Salad</div>
+      <div class="song-date">📅 February 20, 2026</div>
+      <div class="song-archetype">
+        <span class="tag" style="background:rgba(245,158,11,0.12);color:var(--amber)">⚖️ Balanced Performer</span>
+      </div>
+      <div class="song-desc" style="border-color:var(--amber)">
+        The most <strong style="color:var(--white)">strategically healthy</strong> of the newer releases. It peaked at 17 days — not too fast, not too slow — and has moderate decay, meaning it held some of its audience. Think of it as a healthy mid-table hit. Not viral, not sleeper, just solid and reliable.
+      </div>
+      <div class="song-metrics">
+        <div class="metric-item"><div class="metric-val" style="color:var(--amber)">12.4M</div><div class="metric-lbl">Spotify Streams</div></div>
+        <div class="metric-item"><div class="metric-val" style="color:var(--amber)">1.05M</div><div class="metric-lbl">YouTube Views</div></div>
+        <div class="metric-item"><div class="metric-val">536K</div><div class="metric-lbl">Peak Daily</div></div>
+        <div class="metric-item"><div class="metric-val"><span class="decay-pill decay-moderate">Moderate</span></div><div class="metric-lbl">Retention Type</div></div>
+      </div>
+      <div class="song-geo">
+        <div class="geo-title">Audience Geography</div>
+        <div class="geo-bar-row"><span class="geo-label">Nigeria</span><div class="geo-track"><div class="geo-fill" style="width:42.4%;background:var(--amber)"></div></div><span class="geo-pct">42.4%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">US</span><div class="geo-track"><div class="geo-fill" style="width:14.5%;background:var(--amber);opacity:.7"></div></div><span class="geo-pct">14.5%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">S. Africa</span><div class="geo-track"><div class="geo-fill" style="width:7.1%;background:var(--amber);opacity:.5"></div></div><span class="geo-pct">7.1%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Ghana</span><div class="geo-track"><div class="geo-fill" style="width:5.3%;background:var(--amber);opacity:.4"></div></div><span class="geo-pct">5.3%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Kenya</span><div class="geo-track"><div class="geo-fill" style="width:4.8%;background:var(--amber);opacity:.3"></div></div><span class="geo-pct">4.8%</span></div>
+      </div>
+    </div>
+
+    <!-- NO -->
+    <div class="song-card fade-up">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#A855F7,#6366F1)"></div>
+      <div class="song-number">05 / 05</div>
+      <div class="song-name">No</div>
+      <div class="song-date">📅 December 1, 2023</div>
+      <div class="song-archetype">
+        <span class="tag" style="background:rgba(168,85,247,0.12);color:var(--purple)">📦 Deep Catalog Stabilizer</span>
+      </div>
+      <div class="song-desc" style="border-color:var(--purple)">
+        The <strong style="color:var(--white)">oldest song in the catalog</strong> — and it's still streaming. With the lowest daily peaks but very low decay, this is proof of a loyal, core fanbase. Songs like this don't make headlines, but they keep the income steady month after month, year after year.
+      </div>
+      <div class="song-metrics">
+        <div class="metric-item"><div class="metric-val" style="color:var(--purple)">11.0M</div><div class="metric-lbl">Spotify Streams</div></div>
+        <div class="metric-item"><div class="metric-val" style="color:var(--purple)">1.29M</div><div class="metric-lbl">YouTube Views</div></div>
+        <div class="metric-item"><div class="metric-val">75K</div><div class="metric-lbl">Peak Daily</div></div>
+        <div class="metric-item"><div class="metric-val"><span class="decay-pill decay-vlow">Very Low</span></div><div class="metric-lbl">Retention Type</div></div>
+      </div>
+      <div class="song-geo">
+        <div class="geo-title">Audience Geography</div>
+        <div class="geo-bar-row"><span class="geo-label">Nigeria</span><div class="geo-track"><div class="geo-fill" style="width:43.2%;background:var(--purple)"></div></div><span class="geo-pct">43.2%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">US</span><div class="geo-track"><div class="geo-fill" style="width:13.8%;background:var(--purple);opacity:.7"></div></div><span class="geo-pct">13.8%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">S. Africa</span><div class="geo-track"><div class="geo-fill" style="width:8.9%;background:var(--purple);opacity:.5"></div></div><span class="geo-pct">8.9%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">Ghana</span><div class="geo-track"><div class="geo-fill" style="width:4.7%;background:var(--purple);opacity:.4"></div></div><span class="geo-pct">4.7%</span></div>
+        <div class="geo-bar-row"><span class="geo-label">UK</span><div class="geo-track"><div class="geo-fill" style="width:4.2%;background:var(--purple);opacity:.3"></div></div><span class="geo-pct">4.2%</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ SECTION 3: BEHAVIOR COMPARISON ═══════════════ -->
+<section id="behavior">
+  <div class="section-header">
+    <h2 class="section-title">📈 Streaming Behavior Comparison</h2>
+    <p class="section-desc">Not all songs perform the same way. This shows how each track moves — from launch to long-term.</p>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title" style="font-size:15px">Peak Intensity — How Big Was the Spike?</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="peakChart" height="220"></canvas>
+      </div>
+      <div class="chart-caption">Peak daily streams show how much attention each song captured at its highest point. Mofe had the biggest spike — but biggest isn't always best.</div>
+    </div>
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title" style="font-size:15px">Catalog Share — Who's Pulling the Weight?</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="shareChart" height="220"></canvas>
+      </div>
+      <div class="chart-caption">Tumo Weto and Escaladizzy 2 together account for 67% of all catalog streams. A healthy mix of new hits and mature assets.</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-header">
+      <div class="section-title" style="font-size:15px">Long-Term Stability vs. Short-Term Intensity</div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="stabilityChart" height="180"></canvas>
+    </div>
+    <div class="chart-caption">This shows each song's balance between initial excitement and long-term staying power. Songs in the top-right quadrant of this chart are the most valuable catalog assets.</div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-icon">🔑</div>
+    <div>
+      <div class="insight-title">The Key Insight: Retention Beats Raw Numbers</div>
+      <div class="insight-body">Mofe had 10× more daily streams at its peak than Tumo Weto — but Tumo Weto has 3× more total streams. This is what retention looks like in practice. A song that streams at 100K/day for 6 months earns more than a song that hits 1M/day for 2 weeks. <strong style="color:var(--white)">The money is in the long tail, not the spike.</strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SECTION 4: GEOGRAPHY ═══════════════ -->
+<section id="geography">
+  <div class="section-header">
+    <h2 class="section-title">🌍 Geography Analysis</h2>
+    <p class="section-desc">Where Mavo's audience actually lives — and why it matters for revenue quality.</p>
+  </div>
+
+  <div class="grid-52" style="margin-bottom:16px">
+    <div class="card">
+      <div class="section-title" style="font-size:15px;margin-bottom:16px">Average Audience Distribution Across All Songs</div>
+      <canvas id="geoChart" height="280"></canvas>
+      <div class="chart-caption">Nigeria is consistently the largest market across the entire catalog. The US and African diaspora markets (South Africa, Ghana, Kenya) follow predictably across all 5 songs.</div>
+    </div>
+    <div class="card">
+      <div class="section-title" style="font-size:15px;margin-bottom:16px">Geographic Consistency</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;color:var(--muted)">Nigeria (avg)</span>
+            <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">46.1%</span>
+          </div>
+          <div style="height:8px;background:var(--surface2);border-radius:4px"><div style="width:46.1%;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;color:var(--muted)">United States (avg)</span>
+            <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">13.8%</span>
+          </div>
+          <div style="height:8px;background:var(--surface2);border-radius:4px"><div style="width:13.8%;height:100%;border-radius:4px;background:#4ADE80"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;color:var(--muted)">South Africa (avg)</span>
+            <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">6.7%</span>
+          </div>
+          <div style="height:8px;background:var(--surface2);border-radius:4px"><div style="width:6.7%;height:100%;border-radius:4px;background:#F472B6"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;color:var(--muted)">Ghana (avg)</span>
+            <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">5.0%</span>
+          </div>
+          <div style="height:8px;background:var(--surface2);border-radius:4px"><div style="width:5%;height:100%;border-radius:4px;background:#FBBF24"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;color:var(--muted)">Kenya / UK / Other</span>
+            <span style="font-size:14px;font-weight:600;font-family:'DM Mono',monospace">~4.5%</span>
+          </div>
+          <div style="height:8px;background:var(--surface2);border-radius:4px"><div style="width:4.5%;height:100%;border-radius:4px;background:#A78BFA"></div></div>
+        </div>
+      </div>
+      <div class="divider" style="margin:20px 0"></div>
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:10px;padding:14px">
+        <div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:6px">⚠️ Revenue Quality Note</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.6">The US consistently delivers 13–16% of streams but pays ~<strong style="color:var(--white)">4–5× more per stream</strong> than Nigeria. Growing US share is the single biggest lever for increasing revenue without growing total streams.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="insight">
+    <div class="insight-icon">🗺️</div>
+    <div>
+      <div class="insight-title">Geography Is Consistent — And That's Unusual</div>
+      <div class="insight-body">Across all 5 songs — regardless of release date, genre feel, or marketing — the audience breakdown is remarkably similar. Nigeria hovers between 41–60%, the US between 10–16%, South Africa between 4–9%. This consistency means Mavo has a defined fanbase with predictable geography. The exception is Escaladizzy 2 with 60% Nigerian concentration, suggesting it resonates most deeply with the core domestic audience.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SECTION 5: REVENUE ═══════════════ -->
+<section id="revenue">
+  <div class="section-header">
+    <h2 class="section-title">💰 Revenue Estimation Model</h2>
+    <p class="section-desc">Converting streams into estimated earnings. These are industry-average estimates used for modeling — not confirmed payouts.</p>
+  </div>
+
+  <!-- Assumptions box -->
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;gap:20px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--green)"></div>
+        <span style="font-size:12px;color:var(--muted)">Spotify rate: <strong style="color:var(--white);font-family:'DM Mono',monospace">$0.0035</strong> per stream</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent2)"></div>
+        <span style="font-size:12px;color:var(--muted)">YouTube rate: <strong style="color:var(--white);font-family:'DM Mono',monospace">$0.0012</strong> per view</span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-style:italic">Industry-average estimates for modeling only. Actual rates vary based on listener country, subscription type, and distribution deal.</div>
+  </div>
+
+  <!-- Catalog total panel -->
+  <div class="catalog-total" style="margin-bottom:24px">
+    <div class="catalog-total-main">
+      <div class="catalog-total-label">Estimated Total Catalog Revenue</div>
+      <div class="catalog-total-val"><span>$376,480</span></div>
+    </div>
+    <div class="catalog-mini-stats">
+      <div class="cat-mini">
+        <div class="cat-mini-val" style="color:var(--green)">$141,762</div>
+        <div class="cat-mini-lbl">Top Track (Tumo Weto)</div>
+      </div>
+      <div class="cat-mini">
+        <div class="cat-mini-val" style="color:var(--white)">$75,296</div>
+        <div class="cat-mini-lbl">Average Per Song</div>
+      </div>
+      <div class="cat-mini">
+        <div class="cat-mini-val" style="color:var(--amber)">66%</div>
+        <div class="cat-mini-lbl">Top 2 Songs' Share</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Per-song revenue cards -->
+  <div class="grid-3" style="margin-bottom:20px">
+
+    <div class="rev-card" style="border-color:rgba(124,92,252,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="rev-song-name">Tumo Weto</div>
+        <span class="rev-eff rev-high">🔥 High</span>
+      </div>
+      <div class="rev-breakdown">
+        <div class="rev-row"><span class="rev-label">Spotify Revenue</span><span class="rev-val" style="color:#7C5CFC">$137,970</span></div>
+        <div class="rev-row"><span class="rev-label">YouTube Revenue</span><span class="rev-val" style="color:#7C5CFC">$3,792</span></div>
+        <div class="divider"></div>
+        <div class="rev-row"><span style="font-size:13px;font-weight:600">Total Estimated</span><span class="rev-total" style="color:#7C5CFC">$141,762</span></div>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:8px">
+        <div style="width:37.6%;height:100%;border-radius:3px;background:linear-gradient(90deg,#7C5CFC,#A855F7)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">37.6% of total catalog revenue</div>
+    </div>
+
+    <div class="rev-card" style="border-color:rgba(20,184,166,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="rev-song-name">Escaladizzy 2</div>
+        <span class="rev-eff rev-high">🔥 High</span>
+      </div>
+      <div class="rev-breakdown">
+        <div class="rev-row"><span class="rev-label">Spotify Revenue</span><span class="rev-val" style="color:var(--teal)">$108,115</span></div>
+        <div class="rev-row"><span class="rev-label">YouTube Revenue</span><span class="rev-val" style="color:var(--muted)">$0</span></div>
+        <div class="divider"></div>
+        <div class="rev-row"><span style="font-size:13px;font-weight:600">Total Estimated</span><span class="rev-total" style="color:var(--teal)">$108,115</span></div>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:8px">
+        <div style="width:28.7%;height:100%;border-radius:3px;background:linear-gradient(90deg,#14B8A6,#22C55E)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">28.7% of total catalog revenue</div>
+    </div>
+
+    <div class="rev-card" style="border-color:rgba(245,158,11,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="rev-song-name">Aura Salad</div>
+        <span class="rev-eff rev-med">⚡ Medium</span>
+      </div>
+      <div class="rev-breakdown">
+        <div class="rev-row"><span class="rev-label">Spotify Revenue</span><span class="rev-val" style="color:var(--amber)">$43,435</span></div>
+        <div class="rev-row"><span class="rev-label">YouTube Revenue</span><span class="rev-val" style="color:var(--amber)">$1,260</span></div>
+        <div class="divider"></div>
+        <div class="rev-row"><span style="font-size:13px;font-weight:600">Total Estimated</span><span class="rev-total" style="color:var(--amber)">$44,695</span></div>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:8px">
+        <div style="width:11.9%;height:100%;border-radius:3px;background:linear-gradient(90deg,#F59E0B,#EAB308)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">11.9% of total catalog revenue</div>
+    </div>
+
+    <div class="rev-card" style="border-color:rgba(252,92,125,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="rev-song-name">Mofe</div>
+        <span class="rev-eff rev-med">⚡ Medium</span>
+      </div>
+      <div class="rev-breakdown">
+        <div class="rev-row"><span class="rev-label">Spotify Revenue</span><span class="rev-val" style="color:var(--accent2)">$42,000</span></div>
+        <div class="rev-row"><span class="rev-label">YouTube Revenue</span><span class="rev-val" style="color:var(--muted)">$0</span></div>
+        <div class="divider"></div>
+        <div class="rev-row"><span style="font-size:13px;font-weight:600">Total Estimated</span><span class="rev-total" style="color:var(--accent2)">$42,000</span></div>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:8px">
+        <div style="width:11.2%;height:100%;border-radius:3px;background:linear-gradient(90deg,#FC5C7D,#F59E0B)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">11.2% of total catalog revenue</div>
+    </div>
+
+    <div class="rev-card" style="border-color:rgba(168,85,247,0.3)">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">
+        <div class="rev-song-name">No</div>
+        <span class="rev-eff rev-low">📦 Low (Deep Catalog)</span>
+      </div>
+      <div class="rev-breakdown">
+        <div class="rev-row"><span class="rev-label">Spotify Revenue</span><span class="rev-val" style="color:var(--purple)">$38,360</span></div>
+        <div class="rev-row"><span class="rev-label">YouTube Revenue</span><span class="rev-val" style="color:var(--purple)">$1,548</span></div>
+        <div class="divider"></div>
+        <div class="rev-row"><span style="font-size:13px;font-weight:600">Total Estimated</span><span class="rev-total" style="color:var(--purple)">$39,908</span></div>
+      </div>
+      <div style="height:6px;background:var(--surface2);border-radius:3px;margin-top:8px">
+        <div style="width:10.6%;height:100%;border-radius:3px;background:linear-gradient(90deg,#A855F7,#6366F1)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px">10.6% of total catalog revenue</div>
+    </div>
+
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center;background:rgba(124,92,252,0.05);border-color:rgba(124,92,252,0.2)">
+      <canvas id="revenueChart" height="220"></canvas>
+      <div class="chart-caption" style="margin-top:8px">Revenue distribution across the catalog. Two songs — Tumo Weto and Escaladizzy 2 — generate nearly two-thirds of all estimated earnings.</div>
+    </div>
+
+  </div>
+
+  <!-- Revenue insight + takeaways -->
+  <div class="insight" style="margin-bottom:16px">
+    <div class="insight-icon">📊</div>
+    <div>
+      <div class="insight-title">Revenue Is Unevenly Distributed — This Is Normal</div>
+      <div class="insight-body">Tumo Weto and Escaladizzy 2 contribute an estimated <strong style="color:var(--white)">$249,877 (66.4%)</strong> of total catalog revenue. This hit-concentration is typical in music — but the presence of long-tail assets like "No" and the steady build of "Aura Salad" means the catalog isn't dangerously top-heavy. <strong style="color:var(--white)">Passive income from deep catalog tracks is the difference between a one-hit artist and a sustainable music business.</strong></div>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <div class="section-title" style="font-size:16px">🎯 Strategic Takeaways</div>
+    <div class="takeaway-grid">
+      <div class="takeaway-item">
+        <div class="takeaway-dot" style="background:rgba(34,197,94,0.12)">🌱</div>
+        <div>
+          <div class="takeaway-title">Slow-Burn = Long-Term Income</div>
+          <div class="takeaway-body">Songs like Tumo Weto and No keep generating revenue long after release. Every new release should aim to build this type of listener loyalty, not just rack up first-week numbers.</div>
+        </div>
+      </div>
+      <div class="takeaway-item">
+        <div class="takeaway-dot" style="background:rgba(252,92,125,0.12)">⚡</div>
+        <div>
+          <div class="takeaway-title">Fast Spikes = Short Bursts</div>
+          <div class="takeaway-body">Mofe's massive opening peak was real income — but it came and went quickly. Spike songs are valuable for visibility and playlist placements, but they need retention-focused follow-ups to lock in new listeners.</div>
+        </div>
+      </div>
+      <div class="takeaway-item">
+        <div class="takeaway-dot" style="background:rgba(20,184,166,0.12)">🏛️</div>
+        <div>
+          <div class="takeaway-title">Stable Catalog = Predictable Passive Income</div>
+          <div class="takeaway-body">Escaladizzy 2 has been generating steady income for almost a year. Building more songs like this is how music becomes a business asset rather than a one-time event.</div>
+        </div>
+      </div>
+      <div class="takeaway-item">
+        <div class="takeaway-dot" style="background:rgba(245,158,11,0.12)">🌍</div>
+        <div>
+          <div class="takeaway-title">US/UK Streams Pay More</div>
+          <div class="takeaway-body">The same 1 million streams pay 4–5× more when they come from the US or UK versus Nigeria. Growing international audience reach — through features, playlist pitching, or targeted marketing — is the highest ROI growth strategy available.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ SECTION 6: SUMMARY ═══════════════ -->
+<section id="summary">
+  <div class="section-header">
+    <h2 class="section-title">🧠 Catalog Intelligence Summary</h2>
+    <p class="section-desc">What the data says about where Mavo is — and where the opportunity is.</p>
+  </div>
+
+  <div class="summary-grid" style="margin-bottom:20px">
+    <div class="summary-item">
+      <div class="summary-icon">🏗️</div>
+      <div class="summary-title">Mixed Performance Architecture</div>
+      <div class="summary-body">The catalog contains all the archetypes of a healthy streaming business: a slow-burn anchor (Tumo Weto), a mature passive asset (Escaladizzy 2), a viral hit (Mofe), a balanced grower (Aura Salad), and a deep catalog stabilizer (No). This diversity is a strength.</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">🎯</div>
+      <div class="summary-title">Consistent Audience Reach</div>
+      <div class="summary-body">Nigeria (41–60%), US (10–16%), South Africa (4–9%) — this pattern holds across every release, every format, every year. Mavo has a defined, loyal fanbase. The consistency makes planning easier and audience growth more predictable.</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">⚡</div>
+      <div class="summary-title">Retention Drives Everything</div>
+      <div class="summary-body">The biggest variation between songs isn't peak size — it's how long people keep listening. Songs with low decay (Tumo Weto, No, Escaladizzy 2) generate far more total revenue than their peak numbers suggest. Retention is the metric that matters most.</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">💎</div>
+      <div class="summary-title">Long-Tail Assets Already Exist</div>
+      <div class="summary-body">Most artists don't build genuine catalog assets until well into their career. Mavo already has two. Escaladizzy 2 and No are still streaming regularly — that's passive income with no additional marketing spend. Protect and build on these.</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">🚀</div>
+      <div class="summary-title">Cross-Platform Gap Is an Opportunity</div>
+      <div class="summary-body">3 of 5 songs have zero YouTube presence. Tumo Weto has 3.16M YouTube views alongside its Spotify performance — and earns more as a result. Activating YouTube on the back catalog could add meaningful additional revenue without any new music.</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-icon">📈</div>
+      <div class="summary-title">Strong Optimization Potential</div>
+      <div class="summary-body">With consistent audience geography, multiple catalog archetypes, and two proven long-tail assets, the framework is in place. The next phase is optimizing: more retention-focused releases, YouTube activation, and growing high-yield markets (US, UK) to maximize revenue per stream.</div>
+    </div>
+  </div>
+
+  <!-- Final CTA box -->
+  <div style="background:linear-gradient(135deg,rgba(124,92,252,0.12),rgba(252,92,125,0.08));border:1px solid rgba(124,92,252,0.25);border-radius:20px;padding:36px;text-align:center">
+    <div style="font-size:28px;margin-bottom:12px">🎵</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:10px">The Bottom Line</div>
+    <div style="font-size:15px;color:var(--muted);line-height:1.8;max-width:600px;margin:0 auto">Mavo's catalog already generates consistent passive income from multiple asset types. The foundation is stronger than most artists at this stage. The biggest opportunity is not more songs — it's <strong style="color:var(--white)">activating the existing catalog more aggressively</strong> across platforms and markets, while continuing to release songs built for retention, not just reach.</div>
+  </div>
+</section>
+
+</div>
+
+<!-- FOOTER -->
+<div style="background:var(--surface);border-top:1px solid var(--border);padding:20px 24px;text-align:center">
+  <div style="font-size:12px;color:var(--muted)">Mavo Catalog Intelligence Dashboard · Data sources: Spotify, YouTube · Revenue figures are industry-average estimates for modeling purposes only</div>
+</div>
+
+<script>
+Chart.defaults.color = '#6B6B7A';
+Chart.defaults.borderColor = '#242429';
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+const songs = ['Tumo Weto','Mofe','Aura Salad','Escaladizzy 2','No'];
+const colors = ['#7C5CFC','#FC5C7D','#F59E0B','#14B8A6','#A855F7'];
+const colorsAlpha = ['rgba(124,92,252,0.7)','rgba(252,92,125,0.7)','rgba(245,158,11,0.7)','rgba(20,184,166,0.7)','rgba(168,85,247,0.7)'];
+
+// Peak chart
+new Chart(document.getElementById('peakChart'), {
+  type: 'bar',
+  data: {
+    labels: songs,
+    datasets: [{
+      label: 'Peak Daily Streams',
+      data: [500000, 1020000, 536000, 200000, 75000],
+      backgroundColor: colorsAlpha,
+      borderColor: colors,
+      borderWidth: 1.5,
+      borderRadius: 8,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => `${(ctx.parsed.y/1000).toFixed(0)}K daily streams at peak`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: {
+        grid: { color: '#1C1C21' },
+        ticks: { callback: v => (v/1000)+'K', font: { size: 10 } }
+      }
+    }
+  }
+});
+
+// Share chart
+new Chart(document.getElementById('shareChart'), {
+  type: 'doughnut',
+  data: {
+    labels: songs,
+    datasets: [{
+      data: [37.3, 11.4, 11.7, 29.2, 10.4],
+      backgroundColor: colorsAlpha,
+      borderColor: colors,
+      borderWidth: 2,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '65%',
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { padding: 12, font: { size: 11 }, boxWidth: 12, boxHeight: 12 }
+      },
+      tooltip: {
+        callbacks: { label: ctx => `${ctx.label}: ${ctx.parsed}% of streams` }
+      }
+    }
+  }
+});
+
+// Stability scatter (peak intensity vs stability score)
+new Chart(document.getElementById('stabilityChart'), {
+  type: 'bubble',
+  data: {
+    datasets: songs.map((s, i) => ({
+      label: s,
+      data: [{
+        x: [500, 1020, 536, 200, 75][i],
+        y: [85, 25, 60, 92, 90][i],
+        r: [39.42, 12, 12.41, 30.89, 10.96][i] * 0.35
+      }],
+      backgroundColor: colorsAlpha[i],
+      borderColor: colors[i],
+      borderWidth: 1.5
+    }))
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 10 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => `${ctx.dataset.label} — Peak: ${ctx.parsed.x}K/day, Stability: ${ctx.parsed.y}%`
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: { display: true, text: 'Peak Daily Streams (thousands)', font: { size: 11 }, color: '#6B6B7A' },
+        grid: { color: '#1C1C21' },
+        ticks: { callback: v => (v/1000)+'K', font: { size: 10 } }
+      },
+      y: {
+        title: { display: true, text: 'Long-Term Stability Score (0–100)', font: { size: 11 }, color: '#6B6B7A' },
+        grid: { color: '#1C1C21' },
+        max: 100,
+        ticks: { font: { size: 10 } }
+      }
+    }
+  }
+});
+
+// Geo chart
+new Chart(document.getElementById('geoChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Nigeria', 'United States', 'South Africa', 'Ghana', 'Kenya / UK / Other'],
+    datasets: songs.map((s, i) => ({
+      label: s,
+      data: [
+        [43.2, 41.6, 42.4, 60.0, 43.2],
+        [15.7, 15.1, 14.5, 10.0, 13.8],
+        [6.6, 7.0, 7.1, 3.7, 8.9],
+        [4.8, 5.3, 5.3, 4.9, 4.7],
+        [4.8, 4.9, 4.8, 3.7, 4.2],
+      ].map(row => row[i]),
+      backgroundColor: colorsAlpha[i],
+      borderColor: colors[i],
+      borderWidth: 1,
+      borderRadius: 4,
+    }))
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 10, padding: 10 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y}%`
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, stacked: false, ticks: { font: { size: 10 } } },
+      y: {
+        grid: { color: '#1C1C21' },
+        max: 70,
+        ticks: { callback: v => v+'%', font: { size: 10 } }
+      }
+    }
+  }
+});
+
+// Revenue chart
+new Chart(document.getElementById('revenueChart'), {
+  type: 'doughnut',
+  data: {
+    labels: songs,
+    datasets: [{
+      data: [141762, 42000, 44695, 108115, 39908],
+      backgroundColor: colorsAlpha,
+      borderColor: colors,
+      borderWidth: 2,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '60%',
+    plugins: {
+      legend: { position: 'bottom', labels: { padding: 8, font: { size: 10 }, boxWidth: 10 } },
+      tooltip: {
+        callbacks: {
+          label: ctx => `${ctx.label}: $${ctx.parsed.toLocaleString()}`
+        }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
